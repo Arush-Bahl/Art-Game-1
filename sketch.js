@@ -1,90 +1,118 @@
 
 var database;
 
+var curr_line = [];
+
+var drawing = [];
+
+var points, button;
 
 var prevX, prevY;
+
+var mode = true;
 
 function setup() {
   createCanvas(1200, 600);
 
-  background(255, 255, 255);
-  stroke(0);
-  fill(0)
+  background(0, 0, 0);
+  stroke(255);
+  fill(255)
 
   database = firebase.database();
-  // console.log(firebase);
 
-  var ballRef = database.ref('brush/position');
+  var ballRef = database.ref('brush/lines');
   ballRef.on("value", readPosition);
+
 }
 
 function draw() {
-  // drawSprites();
 
+  button = createButton('Save');
+  button2 = createButton('Clear');
+  // button.style('background-color', color('white'));
+  button.position(600, 500);
+  button2.position(550, 500);
+  button2.mousePressed(clearData);
+  button.mousePressed(saveDrawing);
 
 }
 
 function mouseReleased() {
+  drawing.push(curr_line);
   prevX = null;
   prevY = null;
+
+  curr_line = [];
+
+  // drawPainting(drawing);
+  console.log(drawing);
 }
 
 function mouseDragged() {
 
-  if (!prevX) {
-    changePosition(-1, -1, mouseX, mouseY);
-  } else if (prevX !== mouseX || prevY !== mouseY) {
-    changePosition(prevX, prevY, mouseX, mouseY)
-    // console.log(prevX, prevY, mouseX, mouseY)
+  if (prevX == null) {
+    point(mouseX, mouseY);
+  } else {
+    line(prevX, prevY, mouseX, mouseY);
   }
+  savePosition(mouseX, mouseY)
 
   prevX = mouseX;
   prevY = mouseY;
-
-
-  // database.ref('brush/position').set({
-  //   "x": mouseY,
-
-  //   "y": mouseY,
-
-  //   "prevX": prevX,
-
-  //   "prevY": prevY
-
-  // })
-
 }
 
-function changePosition(x, y, newX, newY) {
+function savePosition(x, y) {
+  curr_line.push({ x, y })
+}
 
-  database.ref('brush/position').set({
-    "x": x,
-    "y": y,
-    "newX": newX,
-    "newY": newY
+function saveDrawing() {
 
-  })
+
+  database.ref('brush/lines').set(drawing);
+
 }
 
 
 function readPosition(data) {
 
-  position = data.val();
+  firebaseDrawing = data.val();
 
-  console.log(position);
+  drawPainting(firebaseDrawing);
 
-  var x = position.x;
+}
 
-  var y = position.y;
-  var newX = position.newX;
-  var newY = position.newY; 
+function drawPainting(firebaseDrawing) {
 
-  if (x == -1) {
-    point(newX, newY);
-  } else {
-    line(x, y, newX, newY)
-    
+  // console.log(firebaseDrawing);
+  if (firebaseDrawing == null) {
+    return;
   }
 
+  for (var i = 0; i < firebaseDrawing.length; i++) {
+    var cLine = firebaseDrawing[i];
+    for (var j = 0; j < cLine; j++) {
+      var pos = cLine[j];
+      if (j == 0) {
+        point(pos.x, pos.y);
+      } else {
+        line(cLine[j - 1].x, cLine[j - 1].y, pos.x, pos.y);
+      }
+    }
+
+  }
+
+}
+
+function clearData() {
+
+  curr_line = [];
+
+  drawing = [];
+
+  clear();
+
+  background("black");
+
+  database.ref('brush').set(drawing);
 
 }
